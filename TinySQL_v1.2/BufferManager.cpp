@@ -47,15 +47,25 @@ long BufferManager::openDB(char *db_name) {
 }
 
 bool BufferManager::closeDB(char *db_name) {
-    return close(BufferManager::getBid());
+    int c = close(BufferManager::getBid());
+    if(c==0)
+        return true;
+    return false;
 }
 
 bool BufferManager::readFromDB(long bid, void* buffer, int pageNum) {
-    return read(BufferManager::getBid(), buffer, pageNum);
+    int r =  read(BufferManager::getBid(), buffer, pageNum);
+    if(r>0)
+        return true;
+   
+        return false;
 }
 
 bool BufferManager::writeIntoDB(long bid, void* buffer, int pageNum) {
-    return write(BufferManager::getBid(), buffer, pageNum);
+    int w = write(BufferManager::getBid(), buffer, pageNum);
+    if(w>0)
+        return true;
+    return false;
 }
 
 long BufferManager::getBid() const {
