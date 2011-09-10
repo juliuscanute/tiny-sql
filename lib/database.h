@@ -1,16 +1,33 @@
-#ifndef PAGE_H
-#define PAGE_H
-#include "page.h"
-#endif
-#define MAX_DB_FILE 40
-typedef struct tsql_ptr {
-    int db_id;
-    char *db_name;
-    int file_id; 
-};
+//
+//  database.h
+//  tiny-sql-test
+//
+//  Created by Julius Canute on 9/10/11.
+//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//
 
-int create_db(tsql_ptr *db_ptr);
-int open_db(tsql_ptr *db_ptr);
-int read_page(tsql_ptr *db_ptr,int page_no);
-int write_page(tsql_ptr *db_ptr,page_header *page);
-int delete_db(tsql_ptr *db_ptr);
+#ifndef tiny_sql_test_database_h
+#define tiny_sql_test_database_h
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include "page.h"
+class Database_Info
+{
+private:
+	long db_id;
+	char *db_name;
+public:
+	int create_db(char *db_name);
+	int open_db();
+	int close_db();
+	int delete_db();
+	int read_page_db(Page_Info *buffer,int page_number);
+	int write_page_db(Page_Info *buffer,int page_number);
+	long get_bid() const;
+    char* get_db_name() const;
+
+};
+#endif
