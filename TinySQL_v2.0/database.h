@@ -8,7 +8,7 @@
 #ifndef DATABASE_H
 #define	DATABASE_H
 
-
+#include "bufferManager.h"
 
 class database
 {
@@ -22,7 +22,7 @@ class database
 	bool deleteDB(char *db_name);
 	bool readFromDB(long bid,void *buffer,int pageNumber);
 	bool writeIntoDB(long bid,void *buffer,int pageNumber);
-        bool addPage(void* buffer);
+        bool addPage(BUF_POOL* buffer);
 
     long getBid() const {
         return bid;
@@ -32,13 +32,6 @@ class database
         this->bid = bid;
     }
 
-    long getP_size() const {
-        return p_size;
-    }
-
-    void setP_size(long p_size) {
-        this->p_size = p_size;
-    }
 
 };
 

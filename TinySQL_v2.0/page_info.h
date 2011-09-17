@@ -7,27 +7,19 @@
 
 #ifndef PAGE_INFO_H
 #define	PAGE_INFO_H
-#define p_size 1024
-#define num_frames 8
-
-typedef struct
-{
-bool _dirty;
-long _pincount;
-unsigned long _priority;
-long _pageno;
-char _pagedata[1];
-}frame;
 
 
-typedef struct
-{
+
+//typedef struct
+//{
 //    char* t_name;
-    frame* free_frame;
-    frame* first;
-    frame* last;
-}pg_header;
+//    BUF_POOL *buf_pool[num_frames];
+//    int free_frames[num_frames];
+//    BUF_POOL* first;
+//    BUF_POOL* last;
+//}PAGE_HEADER;
 
+//PAGE_HEADER* p_head;
 
 #endif	/* PAGE_INFO_H */
 
