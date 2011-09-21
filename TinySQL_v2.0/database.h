@@ -14,6 +14,7 @@ class database
 {
     private:
         long bid;
+    BUF_POOL* page;
 
     public:
 	bool createDB(char *db_name, long db_size);
@@ -22,7 +23,9 @@ class database
 	bool deleteDB(char *db_name);
 	bool readFromDB(long bid,void *buffer,int pageNumber);
 	bool writeIntoDB(long bid,void *buffer,int pageNumber);
-        bool addPage(BUF_POOL* buffer);
+        bool addPage(void* buffer);
+        void getPage(int pageNumber,void* buffer);
+
 
     long getBid() const {
         return bid;

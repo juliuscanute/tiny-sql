@@ -9,7 +9,21 @@
 
 using namespace std;
 
+BUF_POOL* buf_pool[num_frames];
+int free_frames = num_frames;
+int priority[num_frames];
+long frame_size = sizeof(BUF_POOL)-1+sizeof(char)*p_size;
 
+bool buffer_init()
+{
+
+    for(int i=0;i<num_frames;i++)
+    {
+       buf_pool[i]=(BUF_POOL*)malloc(frame_size);
+       buf_pool[i]->_pincount=-1;
+       priority[i] = -1;
+    }
+}
 bool database::createDB(char* db_name, long db_size)
 {
      database::setBid(open(db_name, O_CREAT, 0777));
@@ -20,7 +34,7 @@ bool database::createDB(char* db_name, long db_size)
     {
        database::setBid(open(db_name,O_RDWR));
 //        for(int i=0;i<n;i++)
-       lseek(bid,num_frames*(sizeof(BUF_POOL)-1+sizeof(char)*p_size),SEEK_SET);
+       lseek(bid,num_frames*frame_size,SEEK_SET);
        write(bid,"#",1);
        cout<<"Closing file"<<endl;
         if(!close(bid))
@@ -46,13 +60,14 @@ bool database::deleteDB(char* db_name)
 long database::openDB(char* db_name)
 {
     database::setBid(open(db_name, O_RDWR));
+    cout<<"Bid"<<bid<<endl;
     if(bid>=0)
     {
         buffer_init();
 
         for(int i=0;i<num_frames;i++)
          {
-            lseek(bid,i*(sizeof(BUF_POOL)-1+p_size*sizeof(char)),SEEK_SET);
+            lseek(bid,i*frame_size,SEEK_SET);
             read(bid,buf_pool[i],sizeof(BUF_POOL)-1+p_size*sizeof(char));
          }
 
@@ -80,45 +95,84 @@ bool database::closeDB(char* db_name)
 
 bool database::readFromDB(long bid, void* buffer, int pageNumber)
 {
-    BUF_POOL* new_page = (BUF_POOL*)malloc(sizeof(BUF_POOL));
-    lseek(bid,p_size*pageNumber,SEEK_SET);
-    read(bid,new_page,(sizeof(BUF_POOL)-1+p_size*sizeof(char)));
+    int r;
+    BUF_POOL* new_page = (BUF_POOL*)malloc(frame_size);
+    lseek(bid,frame_size*pageNumber,SEEK_SET);
+    r = read(bid,new_page,frame_size);
+    cout<<"Num of Bytes Read:"<<r<<endl;
+    cout<<"pg_no:"<<pageNumber<<endl;
+    cout<<"PageData:"<<new_page->_pagedata<<endl;
     return database::addPage(new_page);
 }
 
 bool database::writeIntoDB(long bid, void* buffer, int pageNumber)
 {
-    lseek(bid,(sizeof(BUF_POOL)-1+p_size*sizeof(char))*pageNumber,SEEK_SET);
-    write(bid,buffer,(sizeof(BUF_POOL)-1+p_size*sizeof(char)));
+    BUF_POOL* b1=(BUF_POOL*)malloc(frame_size);
+    b1->_pagedata = (char*)buffer;
+    b1->_pageno=pageNumber;
+    cout<<"WritingPageData:"<<b1->_pagedata<<endl<<"PageNumber:"<<b1->_pageno<<endl;
+    lseek(bid,frame_size*pageNumber,SEEK_SET);
+    write(bid,b1,frame_size);
 }
 
-bool database::addPage(BUF_POOL* buffer)
+bool database::addPage(void* buffer)
 {
     int i,lru;
         if(free_frames>0)
         {
          for(i=0;i<num_frames;i++)
           {
-           if(buf_pool[i]->_pincount<0)
+           if(priority[i]<0)
             {
-             buf_pool[i]= buffer;
+             buf_pool[i]= (BUF_POOL*)buffer;
              buf_pool[i]->_pincount = 0;
+             priority[i]=(int)buf_pool[i]->_pageno;
+             cout<<"Adding Page:"<<buf_pool[i]->_pagedata<<endl;
              free_frames--;
              return true;
             }
           }
         }
+    lru = priority[0];
+    buf_pool[lru]= (BUF_POOL*)buffer;
+    buf_pool[lru]->_dirty=0;
+    cout<<"Oops!! Why am I here?"<<endl;
 
-    for(i=0;i<num_frames;i++)
+    return true;
+    return false;
+}
+
+void database::getPage(int pageNumber)
+{
+    int temp,i;
+    BUF_POOL* page;
+    cout<<"free frames:"<<free_frames<<endl;
+    if(free_frames!=num_frames)
     {
-        lru = priority[i];
-        if(buf_pool[lru]->_pincount==0)
+    for(i=0;i<(num_frames-free_frames);i++)
+    {
+        if(buf_pool[i]->_pageno==pageNumber)
         {
-            buf_pool[i]= buffer;
-            buf_pool[i]->_pincount = 0;
-            return true;
+        cout<<"Frame found"<<endl;
+            if(i<frame_size-1)
+            {
+                if(priority[i+1]>=0)
+            temp = priority[i];
+            priority[i]=priority[i+1];
+            priority[i+1]=temp;
+            }
+        cout<<"Page Data:"<<buf_pool[i]->_pagedata<<endl;
+            return buf_pool[i];
         }
     }
-    return false;
+
+    }
+
+    cout<<"Loading page from file..."<<endl;
+    database::readFromDB(bid,&page,pageNumber);
+    cout<<"After Reading Data"<<endl;
+    cout<<"Get_Page_Data:"<<page->_pagedata<<endl;
+    return page;
+
 }
 

@@ -17,12 +17,10 @@ bool _dirty;
 long _pincount;
 unsigned long _priority;
 long _pageno;
-char _pagedata[1];
+char* _pagedata;
 }BUF_POOL;
 
-BUF_POOL* buf_pool[num_frames];
-int free_frames = num_frames;
-int priority[num_frames];
+//BUF_POOL* buf_pool[num_frames];
 
 bool buffer_init();
 

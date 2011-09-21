@@ -8,6 +8,7 @@
 #include <malloc.h>
 #include <cstdlib>
 #include "database.h"
+
 #include <iostream>
 #include <vector>
 #include<string>
@@ -25,8 +26,10 @@ int main() {
     string db;
     string query;
 
+    
+
         system("clear");
-        cout<<"1. CreateDB 2. OpenDB, 3. WriteIntoDB, 4. ReadFromDB, 5. DeleteDB, 6. CloseDB, 7. Quit"<<endl;
+        cout<<"1. CreateDB 2. OpenDB, 3. WriteIntoDB, 4. ReadFromDB, 5. DeleteDB, 6. CloseDB, 7. GetPage, 0. Quit"<<endl;
     while(1)
     {
 //        getline(std::cin, query);
@@ -53,20 +56,20 @@ int main() {
               break;
             }
 
-            case 4:
+            case 3:
             {
                //Write into Database
-               char* file = "SampleData";
-               if(dba.writeIntoDB(b_id,file,1)>0)
+                char* file = "test";
+               if(dba.writeIntoDB(b_id,file,2)>0)
                cout<<"Data is written into file"<<endl;
                break;
             }
 
-            case 3:
+            case 4:
             {
                //Read from Database
                cout<<"Reading data from file"<<endl;
-               if(dba.readFromDB(b_id,data,1)>0)
+               if(dba.readFromDB(b_id,data,2)>0)
                cout<<data<<endl;
                break;
             }
@@ -85,7 +88,17 @@ int main() {
             }
 
             case 7:
+            {
+                BUF_POOL* p = dba.getPage(2);
+                cout<<"Page Data Returned:"<<p->_pagedata<<endl;
+                break;
+            }
+
+            case 0:
+            {
+
                 exit(0);
+            }
 
         }
 
