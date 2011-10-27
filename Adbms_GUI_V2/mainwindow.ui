@@ -144,7 +144,7 @@ p, li { white-space: pre-wrap; }
         </item>
         <item>
          <property name="text">
-          <string>Initialise</string>
+          <string>Connect</string>
          </property>
         </item>
        </widget>
@@ -429,4 +429,3 @@ p, li { white-space: pre-wrap; }
   </connection>
  </connections>
 </ui>
-

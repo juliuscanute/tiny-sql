@@ -32,47 +32,37 @@ struct free_frames* ff;
           ff=(struct free_frames*)malloc(sizeof(struct free_frames)*NUM_FRAMES);
           cout<<"malloced"<<endl;
           h.free_frames=NUM_FRAMES;
+          (pq+0)->prev=NULL;
 
 
           cout<<"initializing variables"<<endl;
           for(i=0;i<NUM_FRAMES;i++)
           {
+              (pq+i)->cur=i;
               (pq+i)->bid=-1;
               (pq+i)->lru=false;
-              (pq+i)->page=buf_pool+i;
-              (ff+i)->frame=buf_pool+i;
+              (pq+i)->page=&buf_pool[i];
               if(i<NUM_FRAMES-1)
               {
-                  ff[i].next=&ff[i+1];
-                  pq[i].next=&pq[i+1];
+                  (pq+i)->next_free=&pq[i+1];
+                  (pq+i)->next=&pq[i+1];
               }
           }
 
 
           cout<<"Initializing priority Queue and free frame list"<<endl;
-          pq[0].prev=&pq[NUM_FRAMES-1];
-          pq[NUM_FRAMES-1].next=&pq[0];
-          h.first_free_frame=&ff[0];
-          h.last_free_frame=&ff[NUM_FRAMES-1];
+          h.first_free_frame=&pq[0];
           h.dbs_open =0;
+          (pq+0)->lru=true;
+
           cout<<"Initializing db.index"<<endl;
-
-
           for(int i=0;i<MAX_DB;i++)
               dbi[i].bid=-1;
+
           cout<<"Initialization done.. returning to main.."<<endl;
-//          buffer::test_buffer();
         return true;
      }
 
-    void buffer::test_buffer()
-    {
-        for(int i=0;i<MAX_DB;i++)
-        {
-            cout<<"Printing Index:"<<i<<endl;
-            cout<<dbi[i].bid<<endl;
-        }
-    }
 
     bool buffer::createDB(char* dbname, int numPages)
      {
@@ -81,7 +71,7 @@ struct free_frames* ff;
         BUF_POOL* page=(BUF_POOL*)malloc(sizeof(BUF_POOL));
         page->_dirty = -1;
         db_name = buffer::addExt(dbname);
-        buffer::test_buffer();
+        //buffer::test_buffer();
        if(fopen(db_name,"rb")!=NULL)
         {
          return true;
@@ -210,28 +200,6 @@ struct free_frames* ff;
             {
                 lseek(bid,pageNumber*h.frame_size,SEEK_SET);
                 read(bid,buf,h.frame_size);
-
-//                for(i=0;i<NUM_FRAMES;i++)
-//                {
-//                    if(h.first_free_frame==NUM_FRAMES)
-//                    {
-//                        lru = h.priority[0];
-//                        if(buf_pool[lru]._dirty>0)
-//                            buffer::writeIntoDB(bid,&buf_pool[lru],buf_pool[lru]._pageno);
-//                        //buf_pool[lru]=buf;
-//                        h.priority[0]=NUM_FRAMES;
-//                        buffer::sort();
-//                        return true;
-//                    }
-//                    //buf_pool[h.first_free_frame]=buf;
-//                    for(h.first_free_frame=0;h.first_free_frame<NUM_FRAMES;h.first_free_frame++)
-//                    {
-//                        if(buf_pool[h.first_free_frame]._dirty==-1)
-//                            break;
-//                    }
-//                    return true;
-
-//                }
                 return false;
             }
         }
@@ -247,6 +215,7 @@ struct free_frames* ff;
             {
                 cout<<"writing page into the file.."<<fd<<endl;
                 lseek(fd,pageNumber*h.frame_size,SEEK_SET);
+                cout<<"PAge Data:"<<buffer->_pagedata<<endl;
                 write(fd,buffer,h.frame_size);
                 return true;
             }
@@ -259,14 +228,17 @@ struct free_frames* ff;
     BUF_POOL* buffer::ReadPage(int fd,int PageNumber)
     {
         p_que* temp;
-        cout<<"Looking for the page in the buffer pool"<<endl;
+        // Search for the requested page in the Buffer Pool
+        cout<<"Looking for the page in the buffer pool"<<endl<<"NUM_FRAMES:"<<NUM_FRAMES<<endl<<h.free_frames<<endl;
 
-        //Search for the requested page in the Buffer Pool
+        // Check whether Buffer Pool is empty or not
         if(h.free_frames!=NUM_FRAMES)
         {
+            int i =NUM_FRAMES-h.free_frames;
             temp=h.mru;
-        do
+        while(1)
         {
+            cout<<"Seaching in Buf_pool.. lru:"<<lru<<"Bid:"<<temp->bid<<"Page Number:"<<temp->page->_pageno<<"Current Offset:"<<temp->cur<<endl;
             if(temp->bid==fd&&temp->page->_pageno==PageNumber)
             {
                 temp->prev->next=temp->next;
@@ -282,36 +254,53 @@ struct free_frames* ff;
                 }
                 return temp->page;
             }
+            cout<<"traversing back.."<<temp->prev->cur<<endl;
+            if(temp->lru==true)
+                break;
             temp=temp->prev;
         }
-        while(!temp->lru);
     }
 
         cout<<"not found.."<<endl<<"fetching from database.."<<endl;
         if(h.free_frames>0)
         {
-            buffer::readFromDB(fd,h.first_free_frame->frame,PageNumber);
-            if(h.lru==NULL)
+            //If the buffer is totally empty
+            buffer::readFromDB(fd,h.first_free_frame->page,PageNumber);
+            if(h.free_frames==NUM_FRAMES)
             {
-                h.lru=pq+0;
-                h.mru=pq+0;
+                cout<<"Empty Buffer First free frame:"<<h.first_free_frame->cur<<endl;
+                h.first_free_frame->bid=fd;
+                h.lru=&pq[0];
+                h.lru->lru=true;
+                h.mru=&pq[0];
                 h.lru->next=h.mru;
                 h.mru->prev=h.lru;
             }
+
+            //Else if the buffer is partially full
             else
             {
-                h.mru->next=h.first_free_frame->p;
+                cout<<"Buffer is partially full.. First Free Frame:"<<h.first_free_frame->cur<<endl;
+                h.first_free_frame->bid=fd;
+                h.mru->next=h.first_free_frame;
+                h.mru->next->prev=h.mru;
                 h.mru=h.mru->next;
-                h.mru->next=h.lru;
-                if(--h.free_frames>0)
-                h.first_free_frame=h.first_free_frame->next;
-
+//                h.mru->next=h.lru;
             }
+            if(--h.free_frames>0)
+            h.first_free_frame=h.first_free_frame->next_free;
+            cout<<"changed first free frame:"<<h.first_free_frame->cur<<endl;
+            //cout<<"Page Data:"<<h.mru->page->_pagedata<<endl;
             return h.mru->page;
         }
 
 
+
+
+        //If the Buffer is Full Replace the least recently used page
         cout<<"No Free Frames.."<<endl<<"replacing least recently used.."<<endl;
+
+        //If the least recently used page is modified, then write the page into db and replace it
         if(h.lru->page->_dirty&&h.lru->bid>-1)
         {
             buffer::writeIntoDB(fd,h.lru->page,PageNumber);
@@ -320,8 +309,10 @@ struct free_frames* ff;
         {
             h.mru->next=h.lru;
             h.lru->prev=h.mru;
+            h.lru->lru=false;
             h.mru=h.mru->next;
             h.lru=h.lru->next;
+            h.lru->lru=true;
         }
       return h.mru->page;
 
@@ -336,6 +327,21 @@ struct free_frames* ff;
        cout<<name<<endl;
        return name;
      }
+
+    void buffer::print_details()
+    {
+        p_que* temp =h.mru;
+        while(temp->lru!=true)
+        {
+            cout<<temp->page->_pageno<<"<-";
+            temp=temp->prev;
+        }
+        cout<<temp->page->_pageno<<endl;
+        cout<<"MRU: Page No-"<<h.mru->page->_pageno<<", Offset-"<<h.mru->cur<<endl;
+        cout<<"LRU: Page No-"<<h.lru->page->_pageno<<", Offset-"<<h.lru->cur<<endl;
+        cout<<"NUM_FREE_FRAMES-"<<h.free_frames<<endl;
+        cout<<"NUM_PAGES IN BUFFER-"<<NUM_FRAMES-h.free_frames<<endl;
+    }
 
 
 

@@ -9,6 +9,8 @@
 
 using namespace std;
 
+buffer buf;
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -98,12 +100,12 @@ void MainWindow::enabler()
 
 void MainWindow::handler()
 {
-    buffer buf;
     BUF_POOL* page;
-    int bid,op = this->ui->comboBox->currentIndex();
+    int bid,op;
     char name[MAX_FILE_NAME];
     string name2;
     bool res;
+    op = this->ui->comboBox->currentIndex();
     ui->label_7->clear();
     switch(op)
     {
@@ -137,7 +139,7 @@ void MainWindow::handler()
             page->_dirty=0;
             page->_pageno=ui->lineEdit_3->text().toInt();
             page->_pagedata = "Sample Page Data";
-            res = buf.writeIntoDB(ui->lineEdit_4->text().toInt(),page,ui->lineEdit_3->text().toInt());
+            res = buf.writeIntoDB(ui->lineEdit_4->text().toInt(),page,page->_pageno);
             if(res==true)
                 ui->label_7->setText("Write Success");
             break;
@@ -168,7 +170,8 @@ void MainWindow::handler()
             if(page!=NULL)
             {
 
-                cout<<"Read Success.."<<endl<<page->_pagedata<<endl;
+                cout<<"Read Success.."<<endl/*<<page->_pagedata<<endl*/;
+                buf.print_details();
             }
             break;
         }
@@ -187,12 +190,13 @@ void MainWindow::handler()
             break;
         }
     }
-    ui->comboBox->setCurrentIndex(0);;
+    ui->comboBox->setCurrentIndex(0);
 
 
 }
 
 void MainWindow::init()
 {
+    buf.buf_init();
 
 }
